@@ -1,0 +1,49 @@
+{
+    "os": "macOS-14.4.1-arm64-arm-64bit",
+    "python": "3.11.8",
+    "heartbeatAt": "2024-04-22T02:45:59.268986",
+    "startedAt": "2024-04-22T02:45:58.655442",
+    "docker": null,
+    "cuda": null,
+    "args": [],
+    "state": "running",
+    "program": "/Users/somiona/Library/CloudStorage/OneDrive-McGillUniversity/School Work/COMP579/mahjong579/sl_train/train_discard_model.py",
+    "codePathLocal": "sl_train/train_discard_model.py",
+    "codePath": "sl_train/train_discard_model.py",
+    "git": {
+        "remote": "https://github.com/Somiona/mahjong579",
+        "commit": "fea9e392cf72f7c2579be266725b6aa7888d720c"
+    },
+    "email": "somionat@gmail.com",
+    "root": "/Users/somiona/Library/CloudStorage/OneDrive-McGillUniversity/School Work/COMP579/mahjong579",
+    "host": "SomionaMBP.ht.home",
+    "username": "somiona",
+    "executable": "/Users/somiona/micromamba/bin/python",
+    "cpu_count": 8,
+    "cpu_count_logical": 8,
+    "cpu_freq": {
+        "current": 3228,
+        "min": 600,
+        "max": 3228
+    },
+    "cpu_freq_per_core": [
+        {
+            "current": 3228,
+            "min": 600,
+            "max": 3228
+        }
+    ],
+    "disk": {
+        "/": {
+            "total": 460.4317207336426,
+            "used": 259.5285339355469
+        }
+    },
+    "gpuapple": {
+        "type": "arm",
+        "vendor": "Apple"
+    },
+    "memory": {
+        "total": 16.0
+    }
+}
