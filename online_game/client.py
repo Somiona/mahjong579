@@ -1,15 +1,14 @@
-import socket
-import json
-import time
-import sys
-import traceback
 import argparse
-import os
 import ast
+import json
+import os
+import socket
+import sys
+import time
+import traceback
 
 sys.path.append(os.path.dirname(os.path.abspath(os.path.dirname(__file__))))
 from mahjong.display import *
-from mahjong.yaku import Yaku
 
 
 class Mahjong(object):
@@ -70,7 +69,7 @@ class Mahjong(object):
         return f'{username}「{player_wind}」'
 
     def print_game_info(self):
-        os.system('clear')
+        os.system('cls')
         wind = ['東', '南', '西', '北'][self.game_round // 4]
         wind_round = self.game_round % 4 + 1
         left_num = self.left_num
@@ -105,7 +104,7 @@ class Mahjong(object):
                     discard_info[i] = ' ' * 6 + discard_info[i]
             discard_info = '\n'.join(discard_info)
             print(player_info)
-            print(magenta(f"牌河: ") + discard_info)
+            print(magenta("牌河: ") + discard_info)
             if p['furo']:
                 furo_str = "副露: "
                 for furo_key, tiles in p['furo'].items():

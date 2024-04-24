@@ -1,0 +1,49 @@
+{
+    "os": "macOS-14.4.1-arm64-arm-64bit",
+    "python": "3.11.9",
+    "heartbeatAt": "2024-04-24T03:14:07.505235",
+    "startedAt": "2024-04-24T03:14:07.003200",
+    "docker": null,
+    "cuda": null,
+    "args": [],
+    "state": "running",
+    "program": "/Users/somiona/Downloads/mahjong579/sl_train/train_furo_model.py",
+    "codePathLocal": "sl_train/train_furo_model.py",
+    "codePath": "sl_train/train_furo_model.py",
+    "git": {
+        "remote": "https://github.com/Somiona/mahjong579",
+        "commit": "c327972d822cd5e09901d955ca1d5104b796aa42"
+    },
+    "email": "somionat@gmail.com",
+    "root": "/Users/somiona/Downloads/mahjong579",
+    "host": "SomionaMBP.ht.home",
+    "username": "somiona",
+    "executable": "/Users/somiona/micromamba/bin/python",
+    "cpu_count": 8,
+    "cpu_count_logical": 8,
+    "cpu_freq": {
+        "current": 3228,
+        "min": 600,
+        "max": 3228
+    },
+    "cpu_freq_per_core": [
+        {
+            "current": 3228,
+            "min": 600,
+            "max": 3228
+        }
+    ],
+    "disk": {
+        "/": {
+            "total": 460.4317207336426,
+            "used": 249.85717010498047
+        }
+    },
+    "gpuapple": {
+        "type": "arm",
+        "vendor": "Apple"
+    },
+    "memory": {
+        "total": 16.0
+    }
+}
