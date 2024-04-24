@@ -1,9 +1,14 @@
 """
-该文件用于打听牌表
+This script is used to generate the machi table.
 """
+import copy
+import pickle
 
-from make_agari_table_2 import *
+import tqdm
 
+from .make_agari_table import calc_key, ptn, unique
+
+MACHI_TABLE = 'MACHI_TABLE.pkl'
 
 def remove_one_from_ptn(a):
     ptns = []
@@ -42,7 +47,7 @@ def remove_one_from_ptn(a):
     return ptns
 
 
-MACHI_TABLE = 'MACHI_TABLE.pkl'
+
 if __name__ == '__main__':
     machi_table = {0: set(), 1: set()}
 

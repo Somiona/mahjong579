@@ -3,7 +3,6 @@ import os
 
 import matplotlib
 import torch
-import wandb
 from sklearn.metrics import (
     accuracy_score,
     auc,
@@ -12,6 +11,8 @@ from sklearn.metrics import (
 )
 from torch.nn import BCEWithLogitsLoss
 from torch.optim import Adam
+
+import wandb
 
 matplotlib.use('Agg')
 import sys
@@ -76,7 +77,7 @@ train_set.data_files, test_set.data_files = train_set.data_files[:len_train], tr
 num_layers = args.num_layers
 in_channels = 291
 model = RiichiModel(num_layers=num_layers, in_channels=in_channels)
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+device = torch.device('cuda' if torch.cuda.is_available() else 'mps' if torch.backends.mps.is_available() else 'cpu')
 model.to(device)
 optim = Adam(model.parameters())
 scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optim, mode='max', patience=1)

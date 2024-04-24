@@ -1,33 +1,32 @@
 import copy
-import pickle
-from typing import List
 import os
-from collections import Counter
-from itertools import combinations
-from .make_agari_table_2 import AGARI_TABLE, calc_key, to_pattern
+import pickle
+
+from .make_agari_table import AGARI_TABLE, calc_key, to_pattern
+from .make_machi_table import MACHI_TABLE
 
 with open(os.path.join(os.path.dirname(__file__), AGARI_TABLE), 'rb') as f:
     agari_table = pickle.loads(f.read())
 
-MACHI_TABLE = 'MACHI_TABLE.pkl'
 with open(os.path.join(os.path.dirname(__file__), MACHI_TABLE), 'rb') as f:
     machi_table = pickle.loads(f.read())
 
 
 def parse_agari_info(value):
-    num_kotsu = value & 0b111
-    num_shuntsu = (value & (0b111 << 3)) >> 3
-    atama = (value & (0b1111 << 6)) >> 6
-    m1 = (value & (0b1111 << 10)) >> 10
-    m2 = (value & (0b1111 << 14)) >> 14
-    m3 = (value & (0b1111 << 18)) >> 18
-    m4 = (value & (0b1111 << 22)) >> 22
-    chitoi = (value & (1 << 26)) >> 26
-    cyuren = (value & (1 << 27)) >> 27
-    ikki = (value & (1 << 28)) >> 28
-    ryanpeikou = (value & (1 << 29)) >> 29
-    ippeikou = (value & (1 << 30)) >> 30
-    return locals()
+    return {
+        'num_kotsu': value & 0b111,
+        'num_shuntsu': (value & (0b111 << 3)) >> 3,
+        'atama': (value & (0b1111 << 6)) >> 6,
+        'm1': (value & (0b1111 << 10)) >> 10,
+        'm2': (value & (0b1111 << 14)) >> 14,
+        'm3': (value & (0b1111 << 18)) >> 18,
+        'm4': (value & (0b1111 << 22)) >> 22,
+        'chitoi': (value & (1 << 26)) >> 26,
+        'cyuren': (value & (1 << 27)) >> 27,
+        'ikki': (value & (1 << 28)) >> 28,
+        'ryanpeikou': (value & (1 << 29)) >> 29,
+        'ippeikou': (value & (1 << 30)) >> 30,
+    }
 
 
 def is_agari(counter):
@@ -56,6 +55,8 @@ def check_machi(counter):
 
 
 def check_riichi(counter, return_riichi_hai=False):
+    if return_riichi_hai:
+        return []
     counter = copy.copy(counter)
     hai = []
     for t, c in list(counter.items()):
@@ -66,11 +67,7 @@ def check_riichi(counter, return_riichi_hai=False):
                     return True
                 hai.append(t)
             counter[t] += 1
-    if hai:
-        return hai
-    if return_riichi_hai:
-        return []
-    return False
+    return hai or False
 
 
 def machi(counter):

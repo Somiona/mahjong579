@@ -1,9 +1,12 @@
 import argparse
+import asyncio
+import logging
 import os
 import shutil
 from pathlib import Path
 
 from data.downloader import download_data, download_logs, read_scc
+from game import Server
 
 
 def clear_tenhou_data():
@@ -28,6 +31,11 @@ if __name__ == "__main__":
         action="store_true",
         help="This open clears both tenhou_logs and tenhou_data folders",
     )
+    parser.add_argument("--min_score", "-m", default=0, type=int)
+    parser.add_argument(
+        "--fast", "-f", action="store_true", help="Cancel AI thinking time"
+    )
+    parser.add_argument("--train", "-t", action="store_true", help="Collect playing data")
     args = parser.parse_args()
 
     if args.reload_data and args.load_scc:
@@ -56,3 +64,7 @@ if __name__ == "__main__":
             if file.startswith("scc") and file.endswith(".txt"):
                 shutil.move(scc_dir / file, log_dir / file)
         download_data()
+
+    logging.basicConfig(level=logging.DEBUG)
+    server = Server(args.min_score, args.fast, args.train)
+    asyncio.run(server.run())

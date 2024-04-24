@@ -2,6 +2,7 @@ import logging
 import os
 import random
 from collections import OrderedDict
+from copy import copy
 from itertools import combinations, product
 from typing import List, Set, Tuple, Union
 
@@ -10,8 +11,8 @@ import torch
 from model.models import DiscardModel, FuroModel, RiichiModel
 
 from .check_agari import check_machi, check_riichi, is_agari, machi
-from .display import *
-from .utils import *
+from .display import TENHOU_TILE_STRING_DICT, yellow
+from .utils import AutoCleanCounter
 
 
 class Agent(object):
@@ -58,17 +59,12 @@ class Agent(object):
     def is_agari(self):
         return is_agari(self.hand_tile_counter)
 
-    def display_tiles(self, style='ascii'):
-        if style == 'ascii':
-            return ascii_style_print([sorted(self.tiles)])
+    def display_tiles(self):
         return ' '.join(TENHOU_TILE_STRING_DICT[_] for _ in sorted(self.tiles))
 
-    def display_furo(self, style='ascii'):
+    def display_furo(self):
         if self.furo:
-            if style == 'ascii':
-                return ascii_style_print(list(self.furo.values()))
-            else:
-                return ' '.join(['「' + ' '.join([TENHOU_TILE_STRING_DICT[_] for _ in furo]) + '」' for furo in self.furo.values()])
+            return ' '.join(['「' + ' '.join([TENHOU_TILE_STRING_DICT[_] for _ in furo]) + '」' for furo in self.furo.values()])
 
     def draw(self, tile_id):
         self.tiles.add(tile_id)
@@ -99,10 +95,7 @@ class Agent(object):
     def riichi(self, double_riichi=False):
         if self.riichi_status:
             return False
-        if double_riichi:
-            self.riichi_status = 2
-        else:
-            self.riichi_status = 1
+        self.riichi_status = 2 if double_riichi else 1
         self.ippatsu_status = 1
         self.riichi_round = len(self.discard_tiles)
         self.score -= 10
@@ -113,9 +106,7 @@ class Agent(object):
         if self.riichi_status:
             return False, None
         tile = tile_id // 4
-        if self.hand_tile_counter[tile] >= 2:
-            return True, tile
-        return False, None
+        return (True, tile) if self.hand_tile_counter[tile] >= 2 else (False, None)
 
     def check_chi(self, tile_id):
         if self.riichi_status:
@@ -315,15 +306,15 @@ class AiAgent(object):
         self.kan_model = None
 
         self.riichi_threshold = self.chi_threshold = self.pon_threshold = self.kan_threshold = None
-
-        self.load_discard_model('model/saved/discard-model/best.pt')
-        self.load_riichi_model('model/saved/riichi-model/best.pt')
-        self.load_chi_model('model/saved/chi-model/best.pt')
-        self.load_pon_model('model/saved/pon-model/best.pt')
-        self.load_kan_model('model/saved/kan-model/best.pt')
+        self.load_discard_model('output/discard-model/checkpoints/best.pt')
+        self.load_riichi_model('output/riichi-model/checkpoints/best.pt')
+        self.load_chi_model('output/chi-model/checkpoints/best.pt')
+        self.load_pon_model('output/pon-model/checkpoints/best.pt')
+        self.load_kan_model('output/kan-model/checkpoints/best.pt')
 
     def load_discard_model(self, model_path):
         if os.path.isfile(model_path):
+            print(model_path)
             params = torch.load(model_path, map_location=self.device)
             state_dict = params['state_dict']
             num_layers = params['num_layers']
@@ -393,7 +384,7 @@ class AiAgent(object):
             return random.choice(tiles), 1 / len(tiles)
         state = torch.from_numpy(state).float()[None].to(self.device)
         output = self.discard_model(state).softmax(1)[0]
-        available = list(set([_ // 4 for _ in tiles]))
+        available = list({_ // 4 for _ in tiles})
         prob = output[available]
         pred = available[prob.argmax().item()]
         candidates = [_ for _ in tiles if _ // 4 == pred]

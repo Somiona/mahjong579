@@ -52,7 +52,7 @@ hidden_dims = args.hidden_dims
 epochs = args.epochs
 num_layers = args.num_layers
 model = RewardPredictor(74, hidden_dims, num_layers)
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+device = torch.device('cuda' if torch.cuda.is_available() else 'mps' if torch.backends.mps.is_available() else 'cpu')
 model.to(device)
 optim = Adam(model.parameters())
 loss_fcn = MSELoss()

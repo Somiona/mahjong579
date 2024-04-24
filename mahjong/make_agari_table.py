@@ -1,10 +1,10 @@
 """
-该文件曾用于打和牌表（已不采用，改用make_agari_table_2.py文件进行打表）
+This script generates the agari table for the mahjong game.
 """
 
 import copy
-from itertools import permutations
 import pickle
+from itertools import permutations
 
 import tqdm
 
@@ -20,6 +20,11 @@ def ptn(a):
             if key not in h1:
                 h1.add(key)
                 h2 = set()
+                t1 = copy.deepcopy(a)
+                t1.pop(i)
+                t1.pop(j - 1)
+                ret += ptn([a[i] + [0] + a[j]] + t1)
+                ret += ptn([a[j] + [0] + a[i]] + t1)
                 for k in range(len(a[i] + a[j]) + 1):
                     t = [0] * len(a[j]) + a[i] + [0] * len(a[j])
                     for m in range(len(a[j])):
@@ -53,15 +58,18 @@ def calc_key(a):
     for b in a:
         for i in b:
             length += 1
-            if i == 2:
+            if i == 1:
                 ret |= 0b11 << length
                 length += 2
-            elif i == 3:
+            elif i == 2:
                 ret |= 0b1111 << length
                 length += 4
-            elif i == 4:
+            elif i == 3:
                 ret |= 0b111111 << length
                 length += 6
+            elif i == 4:
+                ret |= 0b11111111 << length
+                length += 8
         ret |= 0b1 << length
         length += 1
     return ret
@@ -72,6 +80,8 @@ def find_hai_pos(a):
     p_atama = 0
     for i in range(len(a)):
         for j in range(len(a[i])):
+            if a[i][j] == 0:
+                continue
             if a[i][j] >= 2:
                 for ks in range(2):
                     t = copy.deepcopy(a)
@@ -81,17 +91,29 @@ def find_hai_pos(a):
                     p_s = []
                     for k in range(len(t)):
                         for m in range(len(t[k])):
+                            if a[k][m] == 0:
+                                continue
                             if ks == 0:
                                 if t[k][m] >= 3:
                                     t[k][m] -= 3
                                     p_k.append(p)
-                                while len(t[k]) - m >= 3 and t[k][m] >= 1 and t[k][m + 1] >= 1 and t[k][m + 2] >= 1:
+                                while (
+                                    len(t[k]) - m >= 3
+                                    and t[k][m] >= 1
+                                    and t[k][m + 1] >= 1
+                                    and t[k][m + 2] >= 1
+                                ):
                                     t[k][m] -= 1
                                     t[k][m + 1] -= 1
                                     t[k][m + 2] -= 1
                                     p_s.append(p)
                             else:
-                                while len(t[k]) - m >= 3 and t[k][m] >= 1 and t[k][m + 1] >= 1 and t[k][m + 2] >= 1:
+                                while (
+                                    len(t[k]) - m >= 3
+                                    and t[k][m] >= 1
+                                    and t[k][m + 1] >= 1
+                                    and t[k][m + 2] >= 1
+                                ):
                                     t[k][m] -= 1
                                     t[k][m + 1] -= 1
                                     t[k][m + 2] -= 1
@@ -110,43 +132,42 @@ def find_hai_pos(a):
                         for x in p_s:
                             ret |= x << length
                             length += 4
-                        if len(a) == 1:
-                            if a == [[4, 1, 1, 1, 1, 1, 1, 1, 3]] or \
-                                    a == [[3, 2, 1, 1, 1, 1, 1, 1, 3]] or \
-                                    a == [[3, 1, 2, 1, 1, 1, 1, 1, 3]] or \
-                                    a == [[3, 1, 1, 2, 1, 1, 1, 1, 3]] or \
-                                    a == [[3, 1, 1, 1, 2, 1, 1, 1, 3]] or \
-                                    a == [[3, 1, 1, 1, 1, 2, 1, 1, 3]] or \
-                                    a == [[3, 1, 1, 1, 1, 1, 2, 1, 3]] or \
-                                    a == [[3, 1, 1, 1, 1, 1, 1, 2, 3]] or \
-                                    a == [[3, 1, 1, 1, 1, 1, 1, 1, 4]]:
-                                ret |= 1 << 27
+                        if len(a) == 1 and a in [
+                            [[4, 1, 1, 1, 1, 1, 1, 1, 3]],
+                            [[3, 2, 1, 1, 1, 1, 1, 1, 3]],
+                            [[3, 1, 2, 1, 1, 1, 1, 1, 3]],
+                            [[3, 1, 1, 2, 1, 1, 1, 1, 3]],
+                            [[3, 1, 1, 1, 2, 1, 1, 1, 3]],
+                            [[3, 1, 1, 1, 1, 2, 1, 1, 3]],
+                            [[3, 1, 1, 1, 1, 1, 2, 1, 3]],
+                            [[3, 1, 1, 1, 1, 1, 1, 2, 3]],
+                            [[3, 1, 1, 1, 1, 1, 1, 1, 4]],
+                        ]:
+                            ret |= 1 << 27
                         if len(a) <= 3 and len(p_s) >= 3:
                             p_ikki = 0
                             for b in a:
                                 if len(b) == 9:
                                     b_ikki1 = b_ikki2 = b_ikki3 = False
                                     for x_ikki in p_s:
-                                        b_ikki1 |= (x_ikki == p_ikki)
-                                        b_ikki2 |= (x_ikki == p_ikki + 3)
-                                        b_ikki3 |= (x_ikki == p_ikki + 6)
+                                        b_ikki1 |= x_ikki == p_ikki
+                                        b_ikki2 |= x_ikki == p_ikki + 3
+                                        b_ikki3 |= x_ikki == p_ikki + 6
                                     if b_ikki1 and b_ikki2 and b_ikki3:
                                         ret |= 1 << 28
                                 p_ikki += len(b)
-                        if len(p_s) == 4 and \
-                                p_s[0] == p_s[1] and \
-                                p_s[2] == p_s[3]:
+                        if len(p_s) == 4 and p_s[0] == p_s[1] and p_s[2] == p_s[3]:
                             ret |= 1 << 29
                         elif len(p_s) >= 2 and len(p_k) + len(p_s) == 4:
                             if len(p_s) - len(set(p_s)) >= 1:
                                 ret |= 1 << 30
                         ret_array.append(ret)
             p_atama += 1
-    if len(ret_array) > 0:
+    if ret_array:
         ret_array = list(set(ret_array))
-        return ','.join(map(hex, ret_array))
+        return ",".join(map(hex, ret_array))
     t = sum(a, [])
-    if sum(t) == 14 and all(_ == 2 for _ in t):
+    if sum(t) == 14 and all(_ in [0, 2] for _ in t):
         return hex(1 << 26)
 
 
@@ -156,46 +177,48 @@ def to_pattern(counter):
     current_digit, current_type = None, None
     new = []
     for tile, c in counter:
-        if c == 0:
-            continue
         digit, t = tile % 9, tile // 9
-        if t != current_type or digit - 1 != current_digit or t == 3:
-            if new:
-                pattern.append(new)
-                new = []
-        new.append(c)
+        if (t != current_type or digit - 2 > current_digit or t == 3) and new:
+            pattern.append(new)
+            new = []
+        if t == current_type and t != 3 and digit - 2 == current_digit:
+            new.extend([0, c])
+        else:
+            new.append(c)
         current_digit, current_type = digit, t
     if new:
         pattern.append(new)
     return pattern
 
 
-AGARI_TABLE = 'AGARI_TABLE.pkl'
-if __name__ == '__main__':
+AGARI_TABLE = "AGARI_TABLE.pkl"
+if __name__ == "__main__":
     agari_table = {0: {}, 1: {}}
 
     chitoi = ptn([[2], [2], [2], [2], [2], [2], [2]])
-    chitoi = list(filter(lambda x: all(_ == 2 for _ in sum(x, [])), chitoi))
+    chitoi = list(filter(lambda x: all(_ in [0, 2] for _ in sum(x, [])), chitoi))
     chitoi = unique(chitoi)
-    for p in chitoi:
+    for p in tqdm.tqdm(chitoi):
         key = calc_key(p)
         value = find_hai_pos(p)
         agari_table[0][key] = value
-    for a in [[[1, 1, 1], [1, 1, 1], [1, 1, 1], [1, 1, 1], [2]],
-              [[1, 1, 1], [1, 1, 1], [1, 1, 1], [3], [2]],
-              [[1, 1, 1], [1, 1, 1], [3], [3], [2]],
-              [[1, 1, 1], [3], [3], [3], [2]],
-              [[3], [3], [3], [3], [2]],
-              [[1, 1, 1], [1, 1, 1], [1, 1, 1], [2]],
-              [[1, 1, 1], [1, 1, 1], [3], [2]],
-              [[1, 1, 1], [3], [3], [2]],
-              [[3], [3], [3], [2]],
-              [[1, 1, 1], [1, 1, 1], [2]],
-              [[1, 1, 1], [3], [2]],
-              [[3], [3], [2]],
-              [[1, 1, 1], [2]],
-              [[3], [2]],
-              [[2]]]:
+    for a in [
+        [[1, 1, 1], [1, 1, 1], [1, 1, 1], [1, 1, 1], [2]],
+        [[1, 1, 1], [1, 1, 1], [1, 1, 1], [3], [2]],
+        [[1, 1, 1], [1, 1, 1], [3], [3], [2]],
+        [[1, 1, 1], [3], [3], [3], [2]],
+        [[3], [3], [3], [3], [2]],
+        [[1, 1, 1], [1, 1, 1], [1, 1, 1], [2]],
+        [[1, 1, 1], [1, 1, 1], [3], [2]],
+        [[1, 1, 1], [3], [3], [2]],
+        [[3], [3], [3], [2]],
+        [[1, 1, 1], [1, 1, 1], [2]],
+        [[1, 1, 1], [3], [2]],
+        [[3], [3], [2]],
+        [[1, 1, 1], [2]],
+        [[3], [2]],
+        [[2]],
+    ]:
         patterns = unique(ptn(a))
         for p in tqdm.tqdm(patterns):
             key = calc_key(p)
@@ -209,6 +232,6 @@ if __name__ == '__main__':
         agari_table[1][key] = None
         p.pop(i)
 
-    print('和牌pattern数:', len(agari_table[0]))
-    with open(AGARI_TABLE, 'wb') as f:
+    print("agari pattern num:", len(agari_table[0]))
+    with open(AGARI_TABLE, "wb") as f:
         f.write(pickle.dumps(agari_table))

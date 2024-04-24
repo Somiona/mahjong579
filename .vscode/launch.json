@@ -8,8 +8,11 @@
             "name": "Python Debugger: train",
             "type": "debugpy",
             "request": "launch",
-            "program": "sl_train/train_discard_model.py",
-            "console": "integratedTerminal"
+            "program": "online_game/server.py",
+            "console": "integratedTerminal",
+            "args": [
+                "-f"
+            ]
         }
     ]
 }

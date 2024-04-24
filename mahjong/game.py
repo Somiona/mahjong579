@@ -1,10 +1,12 @@
 import random
+from collections import Counter
+from copy import copy
 from typing import List
 
 import numpy as np
 
 from .agent import Agent
-from .utils import *
+from .utils import get_dora, parse_meld
 
 if hasattr(random, 'SystemRandom'):
     random = random.SystemRandom()
@@ -93,7 +95,7 @@ class MahjongGame(object):
                 i
             )
         self.yama = self.yama[52:]
-        index_scores = list(enumerate([p.score for p in self.agents]))
+        index_scores = list(enumerate(p.score for p in self.agents))
         index_scores.sort(key=lambda x: x[1], reverse=True)
         self.ranks = [index_scores.index((i, p.score)) for i, p in enumerate(self.agents)]
         self.public_visible_tiles = Counter([dora_indicator // 4])
@@ -170,9 +172,7 @@ class MahjongGame(object):
         self.public_visible_tiles[tile_id // 4] += 1
 
     def can_declare_riichi(self, who):
-        if self.left_num < 4:
-            return False
-        return self.agents[who].can_declare_riichi()
+        return False if self.left_num < 4 else self.agents[who].can_declare_riichi()
 
     def riichi(self, who, double_riichi=False):
         if self.agents[who].riichi(double_riichi):
@@ -426,26 +426,28 @@ class MahjongGame(object):
         score_feature = self.get_bucket_feature([_.score for _ in self.agents], bins=list(range(50, 450, 50)))  # 四家的分数，分为9个区间
         riichi_feature = self.get_reach_feature()  # 四家的立直情况
         oya_feature = self.get_category_feature(self.oya, 4)  # 亲家
-        features = np.concatenate([
-            hand_feature,  # 16
-            # wall_feature,  # 70
-            seat_feature,  # 4
-            rank_feature,  # 4
-            discard_feature,  # 4 * 24
-            visible_tiles_feature,  # 4
-            dora_feature,  # 5
-            aka_feature,  # 3
-            wind_feature,  # 2
-            left_num_feature,  # 5
-            *furo_feature,  # 16 * 4
-            round_feature,  # 16
-            honba_feature,  # 20
-            riichi_ba_feature,  # 20
-            score_feature,  # 9 * 4
-            riichi_feature,  # 4
-            oya_feature  # 4
-        ], axis=0)  # 373
-        return features
+        return np.concatenate(
+            [
+                hand_feature,  # 16
+                # wall_feature,  # 70
+                seat_feature,  # 4
+                rank_feature,  # 4
+                discard_feature,  # 4 * 24
+                visible_tiles_feature,  # 4
+                dora_feature,  # 5
+                aka_feature,  # 3
+                wind_feature,  # 2
+                left_num_feature,  # 5
+                *furo_feature,  # 16 * 4
+                round_feature,  # 16
+                honba_feature,  # 20
+                riichi_ba_feature,  # 20
+                score_feature,  # 9 * 4
+                riichi_feature,  # 4
+                oya_feature,  # 4
+            ],
+            axis=0,
+        )
 
     def get_game_feature(self, round_score, target_score):
         round_score_feature = self.get_bucket_feature([round_score], bins=list(range(-200, 200, 20)), one_dim=True)

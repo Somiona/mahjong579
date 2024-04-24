@@ -1,5 +1,5 @@
-from typing import List
 from collections import Counter
+from typing import List
 
 import numpy as np
 
@@ -67,8 +67,7 @@ class Yaku(object):
         """
         tokusyu: 1=岭上开花、2=抢杠、3=海底
         """
-        self.hand_tiles = list(hand_tiles)
-        self.hand_tiles.sort()
+        self.hand_tiles = sorted(hand_tiles)
         self.counter = Counter([_ // 4 for _ in self.hand_tiles])
         self.agari = is_agari(self.counter)
         self.furo = furo
@@ -121,10 +120,7 @@ class Yaku(object):
             return True
         if isinstance(self.agari, str):
             x_s = list(map(lambda _: int(_, 16), self.agari.split(',')))
-            for x in x_s:
-                if x & 2080374784:
-                    return True
-            return False
+            return any(x & 2080374784 for x in x_s)
         return True
 
     def calculate_yaku(self):
@@ -145,6 +141,7 @@ class Yaku(object):
         return self.parse_yaku_ret(ret, self.tsumo)
 
     def yaku(self, xs: List[int]):
+        # sourcery skip: hoist-if-from-if, merge-duplicate-blocks, remove-redundant-if
         self.count_dora()
         tiles_pos = [_[0] for _ in self.counter.items()]
         yakuman = []
@@ -545,8 +542,7 @@ class Yaku(object):
             yaku_list.append('门风')
         if ret & YakuList.BAKAZEHAI:
             yaku_list.append('场风')
-        sangen = (ret & YakuList.SANGENHAI_MASK) >> YakuList.SANGENHAI_SHIFT
-        if sangen:
+        if sangen := (ret & YakuList.SANGENHAI_MASK) >> YakuList.SANGENHAI_SHIFT:
             yaku_list.append(f'三元牌の役牌: {sangen}')
         if ret & YakuList.TANYAO:
             yaku_list.append('断幺')
@@ -590,11 +586,9 @@ class Yaku(object):
         elif ret & YakuList.CHINITSU:
             yaku_list.append('清一色')
 
-        dora = (ret & YakuList.DORA_MASK) >> YakuList.DORA_SHIFT
-        if dora:
+        if dora := (ret & YakuList.DORA_MASK) >> YakuList.DORA_SHIFT:
             yaku_list.append(f"宝牌: {dora}")
-        aka = (ret & YakuList.AKA_DORA_MASK) >> YakuList.AKA_DORA_SHIFT
-        if aka:
+        if aka := (ret & YakuList.AKA_DORA_MASK) >> YakuList.AKA_DORA_SHIFT:
             yaku_list.append(f"赤宝牌: {aka}")
         if riichi:
             ura_dora = (ret & YakuList.URA_DORA_MASK) >> YakuList.URA_DORA_SHIFT
