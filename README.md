@@ -2,16 +2,16 @@
 
 - Train the discard model
 ```shell
-$ python sl_train/train_discard_model.py
+$ python model/train_discard_model.py
 ```
 - Train the riichi model
 ```shell
-$ python sl_train/train_riichi_model.py
+$ python model/train_riichi_model.py
 ```
 
 - Train chi/pon/kan model
 ```shell
-$ python sl_train/train_furo_model.py --mode [chi / pon / kan]
+$ python model/train_furo_model.py --mode [chi / pon / kan]
 ```
 
 ## Self-Play

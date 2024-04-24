@@ -11,7 +11,7 @@ import torch
 from model.models import DiscardModel, FuroModel, RiichiModel
 
 from .check_agari import check_machi, check_riichi, is_agari, machi
-from .display import TENHOU_TILE_STRING_DICT, yellow
+from .display import TENHOU_TILE_STRING_DICT, green
 from .utils import AutoCleanCounter
 
 
@@ -300,12 +300,14 @@ class AiAgent(object):
         self.device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
         self.discard_model = None
+        self.weak_discard_model = None
         self.riichi_model = None
         self.chi_model = None
         self.pon_model = None
         self.kan_model = None
 
         self.riichi_threshold = self.chi_threshold = self.pon_threshold = self.kan_threshold = None
+        self.load_weak_discard_model('output/discard-model/checkpoints/weak.pt')
         self.load_discard_model('output/discard-model/checkpoints/best.pt')
         self.load_riichi_model('output/riichi-model/checkpoints/best.pt')
         self.load_chi_model('output/chi-model/checkpoints/best.pt')
@@ -314,7 +316,6 @@ class AiAgent(object):
 
     def load_discard_model(self, model_path):
         if os.path.isfile(model_path):
-            print(model_path)
             params = torch.load(model_path, map_location=self.device)
             state_dict = params['state_dict']
             num_layers = params['num_layers']
@@ -323,7 +324,19 @@ class AiAgent(object):
             self.discard_model.load_state_dict(state_dict)
             self.discard_model.to(self.device)
             self.discard_model.eval()
-            logging.debug(yellow('Discard model loaded'))
+            logging.info(green('Discard model loaded'))
+
+    def load_weak_discard_model(self, model_path):
+        if os.path.isfile(model_path):
+            params = torch.load(model_path, map_location=self.device)
+            state_dict = params['state_dict']
+            num_layers = params['num_layers']
+            in_channels = params['in_channels']
+            self.weak_discard_model = DiscardModel(num_layers=num_layers, in_channels=in_channels)
+            self.weak_discard_model.load_state_dict(state_dict)
+            self.weak_discard_model.to(self.device)
+            self.weak_discard_model.eval()
+            logging.info(green('Weak Discard model loaded'))
 
     def load_riichi_model(self, model_path):
         if os.path.isfile(model_path):
@@ -336,7 +349,7 @@ class AiAgent(object):
             self.riichi_model.load_state_dict(state_dict)
             self.riichi_model.to(self.device)
             self.riichi_model.eval()
-            logging.debug(yellow('Riichi model loaded'))
+            logging.info(green('Riichi model loaded'))
 
     def load_chi_model(self, model_path):
         if os.path.isfile(model_path):
@@ -349,7 +362,7 @@ class AiAgent(object):
             self.chi_model.load_state_dict(state_dict)
             self.chi_model.to(self.device)
             self.chi_model.eval()
-            logging.debug(yellow('Chi model loaded'))
+            logging.info(green('Chi model loaded'))
 
     def load_pon_model(self, model_path):
         if os.path.isfile(model_path):
@@ -362,7 +375,7 @@ class AiAgent(object):
             self.pon_model.load_state_dict(state_dict)
             self.pon_model.to(self.device)
             self.pon_model.eval()
-            logging.debug(yellow('Pon model loaded'))
+            logging.info(green('Pon model loaded'))
 
     def load_kan_model(self, model_path):
         if os.path.isfile(model_path):
@@ -375,15 +388,16 @@ class AiAgent(object):
             self.kan_model.load_state_dict(state_dict)
             self.kan_model.to(self.device)
             self.kan_model.eval()
-            logging.debug(yellow('Kan model loaded'))
+            logging.info(green('Kan model loaded'))
 
-    def discard(self, state, tiles):
+    def discard(self, state, tiles, weak=False):
         if len(tiles) == 1:
             return tiles[0], 1
         if self.discard_model is None:
             return random.choice(tiles), 1 / len(tiles)
         state = torch.from_numpy(state).float()[None].to(self.device)
-        output = self.discard_model(state).softmax(1)[0]
+        model = self.weak_discard_model if weak else self.discard_model
+        output = model(state).softmax(1)[0]
         available = list({_ // 4 for _ in tiles})
         prob = output[available]
         pred = available[prob.argmax().item()]

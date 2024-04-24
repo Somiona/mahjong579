@@ -221,18 +221,6 @@ class MahjongGame(object):
             if c > 0:
                 feature[:, tile] = upper_triangle[c - 1]
         return feature
-        # visible = copy(self.public_visible_tiles)
-        # upper_triangle = np.tril(np.ones(4))
-        # feature1 = np.zeros(shape=(4, 34))  # 全场的可见牌
-        # for tile, c in visible.items():
-        #     if c > 0:
-        #         feature1[:, tile] = upper_triangle[c - 1]
-        # visible.update([_ // 4 for _ in self.agents[target].tiles])
-        # feature2 = np.zeros(shape=(4, 34))  # 自己的可见牌
-        # for tile, c in visible.items():
-        #     if c > 0:
-        #         feature2[:, tile] = upper_triangle[c - 1]
-        # return np.concatenate([feature1, feature2], axis=0)
 
     def get_discard_tile_feature(self, discard_length=24):
         """
@@ -399,17 +387,7 @@ class MahjongGame(object):
         ], axis=0)  # 22
 
     def get_feature(self, target, hidden_info_mask=0):
-        """ Oracle Agent能获取的全局信息 """
-        # hand_features = []
-        # for i in range(4):
-        #     if i == target:
-        #         hand_features.append(self.get_hand_tile_feature(self.agents[i].hand_tile_counter))
-        #     elif hidden_info_mask == 0:
-        #         hand_features.append(np.zeros(shape=(4, 34)))
-        #     else:
-        #         hand_features.append(self.get_hand_tile_feature(self.agents[i].hand_tile_counter) * hidden_info_mask)
-        # hand_feature = np.concatenate(hand_features)
-        # wall_feature = self.get_wall_feature() * hidden_info_mask if hidden_info_mask > 0 else np.zeros(shape=(70, 34))
+        """ Oracle Agent """
         hand_feature = self.get_hand_tile_feature(self.agents[target].hand_tile_counter)  # 手牌
         seat_feature = self.get_category_feature(target, 4)  # 自家座位
         rank_feature = self.get_category_feature(self.ranks[target], 4)  # 自家顺位
@@ -429,7 +407,6 @@ class MahjongGame(object):
         return np.concatenate(
             [
                 hand_feature,  # 16
-                # wall_feature,  # 70
                 seat_feature,  # 4
                 rank_feature,  # 4
                 discard_feature,  # 4 * 24

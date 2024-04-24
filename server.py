@@ -7,7 +7,6 @@ import threading
 import time
 import traceback
 from collections import OrderedDict, defaultdict
-from queue import Queue
 
 import numpy as np
 import torch
@@ -30,44 +29,16 @@ from mahjong.display import (
 from mahjong.game import MahjongGame
 from mahjong.yaku import Yaku, YakuList
 from model.models import RewardPredictor
-
-
-class ControlledQueue(Queue):
-    def __init__(self, maxsize=0):
-        super(ControlledQueue, self).__init__(maxsize)
-        self._allow_put = True
-
-    def allow_put(self):
-        self._allow_put = True
-
-    def put(self, item, block: bool = ..., timeout=...) -> None:
-        if self._allow_put:
-            self._allow_put = False
-            super().put(item, block, timeout)
+from model.reinforcement_learning import monte_carlo_policy_gradient
 
 
 class Client(object):
-    def __init__(self, username):
-        self.username = username
-        self.message_queue = ControlledQueue()
+    def __init__(self, username, is_weak_ai=True):
+        self.is_weak_ai = is_weak_ai
+        self.username = f"{username}({'sl' if is_weak_ai else 'rl'})"
 
     def __eq__(self, username):
         return self.username == username
-
-    def recv(self):
-        buffer = []
-        while True:
-            data = self.client_socket.recv(1)
-            if len(data) == 0:
-                break
-            if data == b"\n":
-                break
-            buffer.append(data)
-        return b"".join(buffer).decode("utf-8")
-
-    def fetch_message(self):
-        self.message_queue.allow_put()
-        return self.message_queue.get()
 
 
 class GameEnvironment(object):
@@ -80,12 +51,8 @@ class GameEnvironment(object):
         self.has_aka = has_aka
 
         self.clients = []
-        self.observe_info = defaultdict(list)  # {who: [observer_client]}
-        self.observers = {}  # {username: (observe_who, observer_client)}
-
         self.current_player = 0
         self.game_start = False
-        self.AI_count = 4
         self.ai_agent = AiAgent()
         self.min_score = min_score
         self.fast = fast
@@ -101,7 +68,6 @@ class GameEnvironment(object):
             params = torch.load(
                 "output/reward-model/checkpoints/best.pt", map_location=self.device
             )
-            logging.debug(green("Reward model loaded"))
             self.reward_model = RewardPredictor(
                 74, params["hidden_dims"], params["num_layers"]
             )
@@ -109,8 +75,9 @@ class GameEnvironment(object):
             self.reward_model.to(self.device)
             self.collected_data = defaultdict(list)
             self.reward_features = defaultdict(list)
-        for i in range(self.AI_count):
-            self.clients.append(Client(f"一姬{i + 1}(简单)"))
+            logging.info(green("Reward model loaded"))
+        for i in range(4):
+            self.clients.append(Client(f"ichi{i + 1}", i!=0))
 
     def reward(self, features, i):
         """计算第i轮的reward"""
@@ -127,7 +94,7 @@ class GameEnvironment(object):
         self.game.new_game(self.round, self.honba, self.riichi_ba)
 
     def reset(self):
-        logging.info("Game is reset")
+        logging.info(red("Game is reset"))
         self.game = MahjongGame(self.has_aka, is_playback=False)
         self.agents = self.game.agents
         self.round = 0
@@ -135,25 +102,14 @@ class GameEnvironment(object):
         self.riichi_ba = 0
 
         self.clients.clear()
-        self.observe_info.clear()
-        self.observers.clear()
 
         self.current_player = 0
         self.game_start = False
         if self.train:
-            # self.collected_data.clear()
+            self.collected_data.clear()
             self.reward_features.clear()
-        for i in range(self.AI_count):
-            self.clients.append(Client(f"一姬{i + 1}(简单)"))
-
-    def fetch_decision_message(self, client: Client, actions, after_tsumo):
-        who = self.clients.index(client)
-        return self.decision_by_ai(who, actions, after_tsumo)
-
-    def fetch_discard_message(self, who, client: Client, tiles, banned):
-        if tiles == "all":
-            tiles = list(self.agents[who].tiles)
-        return self.discard_by_ai(who, tiles, banned)
+        for i in range(4):
+            self.clients.append(Client(f"ichi{i + 1}", i!=0))
 
     def decision_by_ai(self, who, actions, after_tsumo):
         state = self.game.get_feature(who)
@@ -171,7 +127,7 @@ class GameEnvironment(object):
                 score = self.ai_agent.riichi_decision(state)
                 logging.debug(
                     yellow(
-                        f"「{self.clients[who].username}」「立直」行为意愿: {score:.3f}"
+                        f"「{self.clients[who].username}」「Riichi」Confidence: {score:.3f}"
                     )
                 )
                 action_score_dict[i] = score
@@ -212,7 +168,9 @@ class GameEnvironment(object):
             pon_state = np.concatenate([pon_feature, state], axis=0)
             action_score_dict[i] = score = self.ai_agent.pon_decision(pon_state)
             logging.debug(
-                yellow(f"「{self.clients[who].username}」「碰」行为意愿: {score:.3f}")
+                yellow(
+                    f"「{self.clients[who].username}」「Pon」Confidence: {score:.3f}"
+                )
             )
         if chi_actions:
             for i, chi_feature in chi_actions.values():
@@ -220,7 +178,7 @@ class GameEnvironment(object):
                 action_score_dict[i] = score = self.ai_agent.chi_decision(chi_state)
                 logging.debug(
                     yellow(
-                        f"「{self.clients[who].username}」「吃」行为意愿: {score:.3f}"
+                        f"「{self.clients[who].username}」「Chi」Confidence: {score:.3f}"
                     )
                 )
         if kan_actions:
@@ -229,7 +187,7 @@ class GameEnvironment(object):
                 action_score_dict[i] = score = self.ai_agent.kan_decision(kan_state)
                 logging.debug(
                     yellow(
-                        f"「{self.clients[who].username}」「杠」行为意愿: {score:.3f}"
+                        f"「{self.clients[who].username}」「Kan」Confidence: {score:.3f}"
                     )
                 )
         if action_score_dict:
@@ -251,10 +209,10 @@ class GameEnvironment(object):
         if banned:
             tiles = [_ for _ in tiles if _ // 4 not in banned]
         state = self.game.get_feature(who)
-        discard, conf = self.ai_agent.discard(state, tiles)
+        discard, conf = self.ai_agent.discard(state, tiles, self.clients[who].is_weak_ai)
         logging.debug(
             yellow(
-                f"「{self.clients[who].username}」以置信度:{conf:.3f} 切出「{TENHOU_TILE_STRING_DICT[discard]}」"
+                f"「{self.clients[who].username} Discard「{TENHOU_TILE_STRING_DICT[discard]}」 Confidence:{conf:.3f}"
             )
         )
         if self.train:
@@ -268,10 +226,10 @@ class GameEnvironment(object):
         ret = action["yaku"]
         yaku_list = action["yaku_list"]
         if who != from_who:
-            agari_info = f"「{self.clients[from_who].username}」放铳！「{self.clients[who].username}」荣和！役种: {'、'.join(yaku_list)}->"
+            agari_info = f"「{self.clients[from_who].username}」放铳！「{self.clients[who].username}」Ron！Agari: {'、'.join(yaku_list)}->"
         else:
             agari_info = (
-                f"「{self.clients[who].username}」自摸！役种: {'、'.join(yaku_list)}->"
+                f"「{self.clients[who].username}」Zimo！Agari: {'、'.join(yaku_list)}->"
             )
         if isinstance(ret, List):
             if han >= 2:
@@ -655,7 +613,6 @@ class GameEnvironment(object):
         }
         """
         player = self.agents[who]
-        connection = self.clients[who]
         actions = [{"type": "pass", "who": who}]
         can_agari = False
         yaku = None
@@ -762,7 +719,6 @@ class GameEnvironment(object):
                     }
                 )
         if len(actions) > 1:
-            message = {"event": "decision", "actions": actions}
             action = self.decision_by_ai(who, actions, False)
             if action["type"] == "agari":
                 if "yaku" not in action:
@@ -795,9 +751,6 @@ class GameEnvironment(object):
 
     async def handle_draw(self, who, tile_id=None, where=0):
         tile_id = self.game.draw(who=who, tile_id=tile_id, where=where)
-        connection = self.clients[who]
-
-        message = {"event": "draw", "who": who, "tile_id": tile_id, "where": where}
         action = await self.check_draw(who, tile_id, where)
         return tile_id, action
 
@@ -817,7 +770,6 @@ class GameEnvironment(object):
         is_riichi_tile: 切出的是否为立直宣言牌
         """
         self.game.discard(who=who, tile_id=tile_id)
-        connection = self.clients[who]
         agari_actions = []
         pon_kan_action = None
         chi_action = None
@@ -856,7 +808,7 @@ class GameEnvironment(object):
             elif action["type"] == "riichi":
                 """处理立直宣言"""
                 logging.info(
-                    blue(f"「{self.clients[self.current_player].username}」「立直」!")
+                    blue(f"「{self.clients[self.current_player].username}」「Riichi」!")
                 )
                 p.declare_riichi = 1
                 return tile_id, action
@@ -879,7 +831,7 @@ class GameEnvironment(object):
                     )
                     logging.info(
                         blue(
-                            f"「{self.clients[self.current_player].username}」暗杠「{' '.join(TENHOU_TILE_STRING_DICT[_] for _ in kan_tile_list)}」"
+                            f"「{self.clients[self.current_player].username}」priv kan「{' '.join(TENHOU_TILE_STRING_DICT[_] for _ in kan_tile_list)}」"
                         )
                     )
                 else:
@@ -915,7 +867,7 @@ class GameEnvironment(object):
                     )
                     logging.info(
                         blue(
-                            f"「{self.clients[self.current_player].username}」加杠「{' '.join(TENHOU_TILE_STRING_DICT[_] for _ in kan_tile_list)}」"
+                            f"「{self.clients[self.current_player].username}」+kan「{' '.join(TENHOU_TILE_STRING_DICT[_] for _ in kan_tile_list)}」"
                         )
                     )
                 self.game.new_dora()
@@ -969,7 +921,6 @@ class GameEnvironment(object):
                     riichi=True,
                     is_riichi_tile=is_riichi_tile,
                 )
-                #!
             elif p.declare_riichi:
                 riichi_options = check_riichi(
                     p.hand_tile_counter, return_riichi_hai=True
@@ -1147,11 +1098,12 @@ class Server:
     def __init__(self, min_score, fast, train=False):
         self.ROOM_ID_LOCK = 0
         train = train and os.path.isfile("output/reward-model/checkpoints/best.pt")
-        logging.debug("Training mode enabled")
+        logging.info("Training mode enabled")
         self.train = train
         self.game = GameEnvironment(
             has_aka=True, min_score=min_score, fast=fast, train=train
         )
+
     async def game_main_loop(self):
         self.game.game_start = True
         random.shuffle(self.game.clients)
@@ -1161,7 +1113,7 @@ class Server:
             wind_round = self.game.round % 4 + 1
             logging.info(
                 green(
-                    f"{wind}{wind_round} Round - {self.game.honba}本场------场供: {self.game.riichi_ba * 1000}"
+                    f"{wind}{wind_round} Stage - {self.game.honba} round ------Riichi Fee: {self.game.riichi_ba * 1000}"
                 )
             )
             res = await self.game.game_loop()
@@ -1190,20 +1142,20 @@ class Server:
                         item.append(reward)
             if not self.game.fast:
                 await asyncio.sleep(2)
-            if not self.game.fast:
-                await asyncio.sleep(15)
             logging.info(green("Continue..."))
             if game_over:
                 logging.info(green("Game Over！"))
                 for i, score in self.game.game.get_rank():
                     logging.info(
                         green(
-                            f"「{self.game.clients[i].username}」积分「{score * 100}」"
+                            f"「{self.game.clients[i].username}」Score「{score * 100}」"
                         )
                     )
                 self.game.game_start = False
                 if not self.game.fast:
                     await asyncio.sleep(0.1)
+                #！call the rl training
+                monte_carlo_policy_gradient(self.game.ai_agent, self.game.collected_data[0])
                 self.game.reset()
                 break
 
