@@ -14,6 +14,11 @@ $ python model/train_riichi_model.py
 $ python model/train_furo_model.py --mode [chi / pon / kan]
 ```
 
+- Train rl
+```shell
+$ python model/reinforcement_learning.py
+```
+
 ## Self-Play
 - Run the game with no wait time
 ```shell
