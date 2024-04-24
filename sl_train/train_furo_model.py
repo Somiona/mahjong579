@@ -62,13 +62,13 @@ def model_test(model, dataset: TenhouDataset, epoch):
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--mode', '-m', default='chi', type=str, choices=['chi', 'pon', 'kan'])
-parser.add_argument('--num_layers', '-n', default=20, type=int)
+parser.add_argument('--num_layers', '-n', default=50, type=int)
 parser.add_argument('--epochs', '-e', default=10, type=int)
-parser.add_argument('--pos_weight', '-w', default=None, type=int)
+parser.add_argument('--pos_weight', '-w', default=10, type=int)
 args = parser.parse_args()
 mode = args.mode
 
-experiment = wandb.init(project='Mahjong', resume='allow', anonymous='must', name=f'train-{mode}-sl')
+experiment = wandb.init(project='Mahjong', resume='allow', name=f'train-{mode}-sl')
 train_set = TenhouDataset(data_dir='train_data', batch_size=128, mode=mode, target_length=2)
 test_set = TenhouDataset(data_dir='train_data', batch_size=128, mode=mode, target_length=2)
 length = len(train_set)

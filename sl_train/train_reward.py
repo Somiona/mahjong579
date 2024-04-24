@@ -3,9 +3,10 @@ import os
 import sys
 
 import torch
-import wandb
 from torch.nn import MSELoss
 from torch.optim import Adam
+
+import wandb
 
 sys.path.append(os.path.dirname(os.path.abspath(os.path.dirname(__file__))))
 from data.dataloader import TenhouDataset, process_reward_data
@@ -32,7 +33,7 @@ def model_test(model, dataset: TenhouDataset):
     return total_error / total
 
 mode = 'reward'
-experiment = wandb.init(project='Mahjong', resume='allow', anonymous='must', name=f'train-{mode}')
+experiment = wandb.init(project='Mahjong', resume='allow', name=f'train-{mode}')
 
 
 train_set = TenhouDataset(data_dir='train_data', batch_size=128, mode=mode, target_length=4)

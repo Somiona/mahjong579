@@ -3,6 +3,7 @@ import os
 
 import matplotlib
 import torch
+import wandb
 from sklearn.metrics import (
     accuracy_score,
     auc,
@@ -12,16 +13,13 @@ from sklearn.metrics import (
 from torch.nn import BCEWithLogitsLoss
 from torch.optim import Adam
 
-import wandb
-
 matplotlib.use('Agg')
 import sys
 
 from matplotlib import pyplot as plt
 
 sys.path.append(os.path.dirname(os.path.abspath(os.path.dirname(__file__))))
-from dataset.data import TenhouDataset, process_data
-
+from data.dataloader import TenhouDataset, process_data
 from model.models import RiichiModel
 
 
@@ -62,12 +60,12 @@ def model_test(model, dataset: TenhouDataset, epoch):
     return recall, precision, acc, f_score, threshold
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--num_layers', '-n', default=20, type=int)
+parser.add_argument('--num_layers', '-n', default=50, type=int)
 parser.add_argument('--epochs', '-e', default=10, type=int)
 parser.add_argument('--pos_weight', '-w', default=None, type=int)
 args = parser.parse_args()
 mode = 'riichi'
-experiment = wandb.init(project='Mahjong', resume='allow', anonymous='must', name=f'train-{mode}-sl')
+experiment = wandb.init(project='Mahjong', resume='allow', name=f'train-{mode}-sl')
 train_set = TenhouDataset(data_dir='train_data', batch_size=128, mode=mode, target_length=2)
 test_set = TenhouDataset(data_dir='train_data', batch_size=128, mode=mode, target_length=2)
 length = len(train_set)
